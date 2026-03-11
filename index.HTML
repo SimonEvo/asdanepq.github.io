@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>EPQ Supervisor Dashboard</title>
+<style>
+  body {
+    font-family: "微软雅黑", Arial, sans-serif;
+    margin: 40px;
+    background: #f7f7f7;
+  }
+  h1 { color: #333; }
+  .card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .progressbar {
+    height: 10px;
+    background: #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 5px;
+  }
+  .progress {
+    height: 10px;
+    background: #4CAF50;
+  }
+  button {
+    padding: 8px 14px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  td, th {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+  }
+  a {
+    color: #4CAF50;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>EPQ Supervisor Dashboard</h1>
+
+<div class="card">
+  <h2>Students</h2>
+  <table id="studentTable">
+    <tr>
+      <th>Name</th>
+      <th>Topic</th>
+      <th>Stage</th>
+      <th>Progress</th>
+      <th>Bear</th>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Create Meeting Note</h2>
+  <button onclick="createMeeting()">New Meeting in Bear</button>
+</div>
+
+<script>
+// 读取学生 CSV 并显示
+function loadStudents() {
+  fetch("students.csv")
+  .then(r => r.text())
+  .then(text => {
+    let rows = text.split("\n").slice(1); // 去掉表头
+    let table = document.getElementById("studentTable");
+    rows.forEach(row => {
+      let cols = row.split(",");
+      if(cols.length < 5) return; // 忽略空行
+      let tr = document.createElement("tr");
+      let progressHTML = `
+        <div class="progressbar">
+          <div class="progress" style="width:${cols[4]}%"></div>
+        </div>
+        ${cols[4]}%
+      `;
+      tr.innerHTML = `
+        <td>${cols[1]}</td>
+        <td>${cols[2]}</td>
+        <td>${cols[3]}</td>
+        <td>${progressHTML}</td>
+        <td><a href="bear://x-callback-url/open-tag?name=${cols[1]}">Open Notes</a></td>
+      `;
+      table.appendChild(tr);
+    });
+  })
+  .catch(err => console.error("Failed to load students.csv", err));
+}
+
+// 创建 Bear 会议笔记
+function createMeeting() {
+  let template = encodeURIComponent(
+`#EPQ #meeting
+
+Date:
+
+Student:
+
+Progress:
+
+Problems:
+
+Next Steps:
+  `
+  );
+  window.location.href = `bear://x-callback-url/create?title=EPQ%20Meeting&text=${template}`;
+}
+
+loadStudents();
+</script>
+
+</body>
+</html>
