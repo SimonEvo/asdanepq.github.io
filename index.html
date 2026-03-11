@@ -1,104 +1,45 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<script>
-
-var password = prompt("Enter password")
-
-if(password !== "03991925"){
-document.body.innerHTML="Access denied"
-}
+<html>
 
 <head>
 <meta charset="UTF-8">
-<title>EPQ Supervisor Dashboard</title>
+<title>EPQ Dashboard</title>
 
 <style>
 
 body{
-font-family: Arial, sans-serif;
+font-family:Arial;
 background:#f5f6fa;
-margin:40px;
+text-align:center;
+margin-top:120px;
 }
 
-h1{
-margin-bottom:30px;
-}
-
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-gap:20px;
-}
-
-.card{
+#loginBox{
 background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:0 3px 10px rgba(0,0,0,0.08);
-transition:0.2s;
+width:300px;
+margin:auto;
+padding:30px;
+border-radius:10px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
 }
 
-.card:hover{
-transform:translateY(-3px);
-}
-
-.name{
-font-size:20px;
-font-weight:bold;
-}
-
-.topic{
-font-size:14px;
-color:#666;
-margin-bottom:10px;
-}
-
-.tag{
-display:inline-block;
-padding:4px 10px;
-border-radius:20px;
-font-size:12px;
-color:white;
-margin-bottom:10px;
-}
-
-.stage-research{background:#3498db;}
-.stage-proposal{background:#f39c12;}
-.stage-planning{background:#9b59b6;}
-.stage-writing{background:#27ae60;}
-
-.progressbar{
-height:8px;
-background:#eee;
-border-radius:6px;
-overflow:hidden;
-margin:8px 0;
-}
-
-.progress{
-height:8px;
-background:#4CAF50;
-}
-
-.task{
-font-size:13px;
+input{
+padding:8px;
+width:200px;
 margin-top:10px;
-color:#444;
 }
 
-.button{
-display:inline-block;
+button{
 margin-top:10px;
-padding:6px 10px;
+padding:8px 14px;
 background:#4CAF50;
 color:white;
-border-radius:6px;
-font-size:13px;
-text-decoration:none;
+border:none;
+border-radius:5px;
 }
 
-.button:hover{
-background:#45a049;
+#mainSite{
+display:none;
 }
 
 </style>
@@ -108,132 +49,53 @@ background:#45a049;
 
 <body>
 
+<div id="loginBox">
+
+<h2>EPQ System</h2>
+<p>Password required</p>
+
+<input id="passwordInput" type="password" placeholder="Enter password">
+
+<br>
+
+<button onclick="checkPassword()">Login</button>
+
+<p id="error" style="color:red;"></p>
+
+</div>
+
+
+
+<div id="mainSite">
+
 <h1>EPQ Supervisor Dashboard</h1>
 
-<div id="studentGrid" class="grid"></div>
+<p>系统内容在这里（你的学生卡片代码）</p>
+
+</div>
+
 
 
 <script>
 
-let students=[]
-let tasks=[]
+const PASSWORD = "epq2026"
 
+function checkPassword(){
 
-function loadData(){
+let input = document.getElementById("passwordInput").value
 
-Promise.all([
-fetch("students.csv").then(r=>r.text()),
-fetch("tasks.csv").then(r=>r.text())
-])
-.then(([studentText,taskText])=>{
+if(input === PASSWORD){
 
-students=parseCSV(studentText)
-tasks=parseCSV(taskText)
+document.getElementById("loginBox").style.display="none"
+document.getElementById("mainSite").style.display="block"
 
-renderStudents()
+}else{
 
-})
+document.getElementById("error").innerText="Wrong password"
 
 }
 
-
-
-function parseCSV(text){
-
-let rows=text.trim().split("\n")
-let headers=rows.shift().split(",")
-
-return rows.map(row=>{
-
-let cols=row.split(",")
-
-let obj={}
-
-headers.forEach((h,i)=>{
-obj[h]=cols[i]
-})
-
-return obj
-
-})
-
 }
-
-
-
-function getNextTask(studentId){
-
-let list=tasks.filter(t=>t.student_id==studentId && t.status!="done")
-
-if(list.length==0)return "All tasks completed"
-
-return list[0].task
-
-}
-
-
-
-function stageClass(stage){
-
-stage=stage.toLowerCase()
-
-if(stage.includes("research")) return "stage-research"
-if(stage.includes("proposal")) return "stage-proposal"
-if(stage.includes("planning")) return "stage-planning"
-if(stage.includes("writing")) return "stage-writing"
-
-return "stage-research"
-
-}
-
-
-
-function renderStudents(){
-
-let grid=document.getElementById("studentGrid")
-
-students.forEach(s=>{
-
-let card=document.createElement("div")
-card.className="card"
-
-let task=getNextTask(s.id)
-
-card.innerHTML=`
-
-<div class="name">${s.name}</div>
-
-<div class="topic">${s.topic}</div>
-
-<div class="tag ${stageClass(s.stage)}">
-${s.stage}
-</div>
-
-<div class="progressbar">
-<div class="progress" style="width:${s.progress}%"></div>
-</div>
-
-<div>${s.progress}% complete</div>
-
-<div class="task">
-Next task: ${task}
-</div>
-
-<a class="button"
-href="bear://x-callback-url/open-tag?name=${s.name}">
-Notes
-</a>
-
-`
-
-grid.appendChild(card)
-
-})
-
-}
-
-
-loadData()
 
 </script>
 
