@@ -1,129 +1,235 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
 <meta charset="UTF-8">
 <title>EPQ Supervisor Dashboard</title>
+
 <style>
-  body {
-    font-family: "微软雅黑", Arial, sans-serif;
-    margin: 40px;
-    background: #f7f7f7;
-  }
-  h1 { color: #333; }
-  .card {
-    background: white;
-    padding: 20px;
-    margin-bottom: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  }
-  .progressbar {
-    height: 10px;
-    background: #ddd;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-top: 5px;
-  }
-  .progress {
-    height: 10px;
-    background: #4CAF50;
-  }
-  button {
-    padding: 8px 14px;
-    border: none;
-    background: #4CAF50;
-    color: white;
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  td, th {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-  }
-  a {
-    color: #4CAF50;
-    text-decoration: none;
-  }
+
+body{
+font-family: Arial, sans-serif;
+background:#f5f6fa;
+margin:40px;
+}
+
+h1{
+margin-bottom:30px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+gap:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+box-shadow:0 3px 10px rgba(0,0,0,0.08);
+transition:0.2s;
+}
+
+.card:hover{
+transform:translateY(-3px);
+}
+
+.name{
+font-size:20px;
+font-weight:bold;
+}
+
+.topic{
+font-size:14px;
+color:#666;
+margin-bottom:10px;
+}
+
+.tag{
+display:inline-block;
+padding:4px 10px;
+border-radius:20px;
+font-size:12px;
+color:white;
+margin-bottom:10px;
+}
+
+.stage-research{background:#3498db;}
+.stage-proposal{background:#f39c12;}
+.stage-planning{background:#9b59b6;}
+.stage-writing{background:#27ae60;}
+
+.progressbar{
+height:8px;
+background:#eee;
+border-radius:6px;
+overflow:hidden;
+margin:8px 0;
+}
+
+.progress{
+height:8px;
+background:#4CAF50;
+}
+
+.task{
+font-size:13px;
+margin-top:10px;
+color:#444;
+}
+
+.button{
+display:inline-block;
+margin-top:10px;
+padding:6px 10px;
+background:#4CAF50;
+color:white;
+border-radius:6px;
+font-size:13px;
+text-decoration:none;
+}
+
+.button:hover{
+background:#45a049;
+}
+
 </style>
+
 </head>
+
+
 <body>
 
 <h1>EPQ Supervisor Dashboard</h1>
 
-<div class="card">
-  <h2>Students</h2>
-  <table id="studentTable">
-    <tr>
-      <th>Name</th>
-      <th>Topic</th>
-      <th>Stage</th>
-      <th>Progress</th>
-      <th>Bear</th>
-    </tr>
-  </table>
-</div>
+<div id="studentGrid" class="grid"></div>
 
-<div class="card">
-  <h2>Create Meeting Note</h2>
-  <button onclick="createMeeting()">New Meeting in Bear</button>
-</div>
 
 <script>
-// 读取学生 CSV 并显示
-function loadStudents() {
-  fetch("students.csv")
-  .then(r => r.text())
-  .then(text => {
-    let rows = text.split("\n").slice(1); // 去掉表头
-    let table = document.getElementById("studentTable");
-    rows.forEach(row => {
-      let cols = row.split(",");
-      if(cols.length < 5) return; // 忽略空行
-      let tr = document.createElement("tr");
-      let progressHTML = `
-        <div class="progressbar">
-          <div class="progress" style="width:${cols[4]}%"></div>
-        </div>
-        ${cols[4]}%
-      `;
-      tr.innerHTML = `
-        <td>${cols[1]}</td>
-        <td>${cols[2]}</td>
-        <td>${cols[3]}</td>
-        <td>${progressHTML}</td>
-        <td><a href="bear://x-callback-url/open-tag?name=${cols[1]}">Open Notes</a></td>
-      `;
-      table.appendChild(tr);
-    });
-  })
-  .catch(err => console.error("Failed to load students.csv", err));
+
+let students=[]
+let tasks=[]
+
+
+function loadData(){
+
+Promise.all([
+fetch("students.csv").then(r=>r.text()),
+fetch("tasks.csv").then(r=>r.text())
+])
+.then(([studentText,taskText])=>{
+
+students=parseCSV(studentText)
+tasks=parseCSV(taskText)
+
+renderStudents()
+
+})
+
 }
 
-// 创建 Bear 会议笔记
-function createMeeting() {
-  let template = encodeURIComponent(
-`#EPQ #meeting
 
-Date:
 
-Student:
+function parseCSV(text){
 
-Progress:
+let rows=text.trim().split("\n")
+let headers=rows.shift().split(",")
 
-Problems:
+return rows.map(row=>{
 
-Next Steps:
-  `
-  );
-  window.location.href = `bear://x-callback-url/create?title=EPQ%20Meeting&text=${template}`;
+let cols=row.split(",")
+
+let obj={}
+
+headers.forEach((h,i)=>{
+obj[h]=cols[i]
+})
+
+return obj
+
+})
+
 }
 
-loadStudents();
+
+
+function getNextTask(studentId){
+
+let list=tasks.filter(t=>t.student_id==studentId && t.status!="done")
+
+if(list.length==0)return "All tasks completed"
+
+return list[0].task
+
+}
+
+
+
+function stageClass(stage){
+
+stage=stage.toLowerCase()
+
+if(stage.includes("research")) return "stage-research"
+if(stage.includes("proposal")) return "stage-proposal"
+if(stage.includes("planning")) return "stage-planning"
+if(stage.includes("writing")) return "stage-writing"
+
+return "stage-research"
+
+}
+
+
+
+function renderStudents(){
+
+let grid=document.getElementById("studentGrid")
+
+students.forEach(s=>{
+
+let card=document.createElement("div")
+card.className="card"
+
+let task=getNextTask(s.id)
+
+card.innerHTML=`
+
+<div class="name">${s.name}</div>
+
+<div class="topic">${s.topic}</div>
+
+<div class="tag ${stageClass(s.stage)}">
+${s.stage}
+</div>
+
+<div class="progressbar">
+<div class="progress" style="width:${s.progress}%"></div>
+</div>
+
+<div>${s.progress}% complete</div>
+
+<div class="task">
+Next task: ${task}
+</div>
+
+<a class="button"
+href="bear://x-callback-url/open-tag?name=${s.name}">
+Notes
+</a>
+
+`
+
+grid.appendChild(card)
+
+})
+
+}
+
+
+loadData()
+
 </script>
 
 </body>
+
 </html>
